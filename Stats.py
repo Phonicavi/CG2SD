@@ -1,17 +1,20 @@
 # -*- coding:utf-8 -*- 
 from Config import *
-
+from __future__ import division
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+import numpy as np
+import os
 
 class Model:
 	@staticmethod
 	def Rgb2greyFromFileName(filename):
-		## TODO: (Qiu Feng) should call Model.Rgb2grey(rgb)
-		pass
+		return Model.Rgb2grey(mpimg.imread(filename))
 
 	@staticmethod
-	def Rgb2grey(rgb): # call with Model.Rgb2grey(rgb)
-		## TODO: (Qiu Feng)
-		pass
+	def Rgb2grey(rgb):
+		# call with Model.Rgb2grey(rgb)
+		return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
 
 	def __init__(self):
 		self.clear();
@@ -26,9 +29,28 @@ class Model:
 		## TODO:(Qiu Feng)
 		# NEED TO set self.__width, self.__height, self.__sample_num, self.__model in this function
 		# self.__model should be double nparray with size(width, height)
+		m_default = 500
+		n_default = 365
+		files = os.listdir(DATA_SOURCE_PATH)
+		grey_size = (m_default, n_default)
+		for f in files:
+			if f.endswith('.png'):
+				Ii = Model.Rgb2greyFromFileName(DATA_SOURCE_PATH+f)
+				grey_size = Ii.shape
+				break
+		grey_sum = np.zeros(grey_size)
+		count = 0
+		for f in files:
+			if f.endswith('.png'):
+				Ii = rgb2grey(mpimg.imread('./1/'+f))
+				grey_sum += Ii
+				count += 1
+		self.__width = grey_size[0]
+		self.__height = grey_size[1]
+		self.__sample_num = count
+		albedo = grey_sum/float(count)
+		self.__model = albedo
 
-
-		pass
 		assert self.__model.shape == (self.__width,self.__height);
 		
 
