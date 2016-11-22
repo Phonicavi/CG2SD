@@ -6,7 +6,6 @@ import matplotlib.image as mpimg
 import numpy as np
 import os,sys
 import random
-from sklearn.externals import joblib
 import ctypes
 from numpy.ctypeslib import ndpointer
 import gc
@@ -152,6 +151,8 @@ class Estimation:
 		print '##################'
 
 		return label_tag;
+
+
 
 
 class Test():

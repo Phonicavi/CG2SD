@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*- 
 import os
+from sklearn.externals import joblib
 DATA_SOURCE_PATH = "./dataset/"
 RESULT_SOURCE_PATH = "./result/"
 
