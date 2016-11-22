@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*- 
+from __future__ import division
 from Config import *
 from plyfile import PlyData, PlyElement
 import math

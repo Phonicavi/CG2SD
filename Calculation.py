@@ -1,10 +1,12 @@
 # -*- coding:utf-8 -*- 
+from __future__ import division
 from Config import *
 from Stats import Model,Estimation
 from Utils import CoordUtils, PlyUtils
 import numpy as np
 from numpy import linalg as LA
 import math,sys
+from progressbar import ProgressBar
 
 class Calculation:
 	@staticmethod
@@ -18,7 +20,7 @@ class Calculation:
 		self.__est = Estimation(model=self.__model,thu=0.75,thd=0.6);
 
 	def process(self,fname):
-		self.detect_boundary(fname, r_neigh=10);
+		self.detect_boundary(fname, r_neigh=1);
 
 	def __standard_normals(self,v):
 		x,y,z = v;
@@ -52,17 +54,17 @@ class Calculation:
 		all_points = pu.get_all_3d_points();   # currently all 3d points are considered
 		BScores = {} # {(x,y,z,nx,ny,nz):Bpos}  type(Bpos):numpy.array(shape=(1,3))
 
-		cnt = 0;
+		cnt = 0
+		pbar = ProgressBar(maxval=len(all_points)).start()
 		for point in all_points:
 			cnt += 1;
-			if cnt % 10 == 0:
-				print str(cnt)
+			pbar.update(cnt)
 			sys.stdout.flush();
 			thisLabel = label_tag[cu.trans3d_2d(point[0],point[1])]
 			if thisLabel == 0: continue;
 
 			Nx = pu.find_point_within_rad(PlyUtils.Simplified(point),r_neigh); # TODO: (Qiu Feng)remove unlabled?
-
+			# print "#Neigh", len(Nx)
 			Nx_star = [];
 			for neigh in Nx:
 				neiLabel = label_tag[cu.trans3d_2d(neigh[0],neigh[1])];
@@ -71,24 +73,22 @@ class Calculation:
 					Nx_star.append(neigh)
 
 			if (len(Nx_star) == 0):
-				print 'o',
-				sys.stdout.flush()
 				continue;
 			centroid = self.__get_centroid([PlyUtils.Simplified(p) for p in Nx_star]);
 
 			Bpos = -1.0*thisLabel*(len(Nx_star)/len(Nx))*(centroid-np.array(PlyUtils.Simplified(point)))
 			if LA.norm(Bpos) > b0:
 				BScores[point] = Bpos;
-
+		pbar.finish();
 		joblib.dump(BScores,Calculation.GetBoundaryDataPath(fname),compress=3);
 
 		print "#Valid boundary pixel:",len(BScores)
-		print BScores
+		# print BScores
 		return BScores;
 
 if __name__ == '__main__':
 	calc = Calculation();
-	calc.process(fname = "meas-00002-00000.png");
+	calc.process(fname = "meas-00003-00000.png");
 
 
 

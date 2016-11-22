@@ -16,7 +16,6 @@ inline double getR(int x1, int y1, int x2, int y2, double ** gs, double ** model
 
 int *generate(int n, int max, int *g) {
     int i, m, a;
-
     m = 0;
     for (i=0; i<max &&  m<n; i++) {
         a = rand()%(max-i);

@@ -96,8 +96,8 @@ class Estimation:
 		self.__Thd = thd;
 		self.__labels = None;  # float [0,1], 0 - shadows, 1 - sunlits
 
-		os.system("g++ --std=gnu++0x -O3 -fPIC -shared "+"./cUtils.cpp -o "+"./cUtils.so")
-		_dll = ctypes.cdll.LoadLibrary('./cUtils.so')
+		os.system("g++ --std=gnu++0x -O3 -fPIC -shared "+"./cLabelFunc.cpp -o "+"./cLabelFunc.so")
+		_dll = ctypes.cdll.LoadLibrary('./cLabelFunc.so')
 		_doublepp = ndpointer(dtype=np.uintp, ndim=1, flags='C')
 		self.__label = _dll.label 
 		self.__label.argtypes = [ctypes.c_int, ctypes.c_int, _doublepp, _doublepp, _doublepp, ctypes.c_int, ctypes.c_int] 
