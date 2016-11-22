@@ -10,10 +10,10 @@ from progressbar import ProgressBar
 
 class Calculation:
 	@staticmethod
-	def GetBoundaryDataPath(picfilename):
+	def GetBoundaryDataPath(picfilename,r_neigh,b0,xita_crease):
 		if not os.path.exists(RESULT_SOURCE_PATH+'boundary_data/'):
 			os.mkdir(RESULT_SOURCE_PATH+'boundary_data/');
-		return RESULT_SOURCE_PATH+'boundary_data/('+picfilename+').bddata';
+		return RESULT_SOURCE_PATH+'boundary_data/('+picfilename+'_'+str((r_neigh,b0,xita_crease))+').bddata';
 
 	def __init__(self):
 		self.__model = Model().get_model();
@@ -41,8 +41,8 @@ class Calculation:
 		return np.array([xSum/num, ySum/num, zSum/num]);
 
 	def detect_boundary(self, fname, r_neigh, b0=0.2, xita_crease =45):
-		if os.path.exists(Calculation.GetBoundaryDataPath(fname)):
-			return joblib.load(Calculation.GetBoundaryDataPath(fname))
+		if os.path.exists(Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease)):
+			return joblib.load(Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease))
 
 		self.__est.clear_label();
 		label_tag = self.__est.get_shadows_label_tag(filename = fname);
@@ -80,7 +80,7 @@ class Calculation:
 			if LA.norm(Bpos) > b0:
 				BScores[point] = Bpos;
 		pbar.finish();
-		joblib.dump(BScores,Calculation.GetBoundaryDataPath(fname),compress=3);
+		joblib.dump(BScores,Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease),compress=3);
 
 		print "#Valid boundary pixel:",len(BScores)
 		# print BScores
