@@ -1,2 +1,4 @@
 /dataset
 /result
+*.pyc
+*.so

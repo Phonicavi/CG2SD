@@ -85,7 +85,7 @@ class Estimation:
 			os.mkdir(RESULT_SOURCE_PATH+'label_data/');
 		return RESULT_SOURCE_PATH+'label_data/('+picfilename+').lbldata';
 
-	def __init__(self,model,thereshold=3,k=1000,c=0.25):
+	def __init__(self,model,thereshold=3,k=1000,thu=0.75,thd=0.5):
 		## read pic data and convert to grey
 	
 		self.__model = model
@@ -93,7 +93,8 @@ class Estimation:
 		self.__R = None;    # should be a numpy array 
 		self.__T = thereshold;
 		self.__K = k;
-		self.__C0 = c;
+		self.__Thu = thu;
+		self.__Thd = thd;
 		self.__labels = None;  # float [0,1], 0 - shadows, 1 - sunlits
 
 		os.system("g++ --std=gnu++0x -O3 -fPIC -shared "+"./cUtils.cpp -o "+"./cUtils.so")
@@ -137,26 +138,52 @@ class Estimation:
 		numShadows = 0;
 		for i in xrange(label_tag.shape[0]):
 			for j in xrange(label_tag.shape[1]):
-				if self.__labels[i,j] > 0.5+self.__C0:
+				if self.__labels[i,j] > self.__Thu:
 					label_tag[i,j] = 1;
 					numLits += 1;
-				elif self.__labels[i,j] < 0.5-self.__C0:
+				elif self.__labels[i,j] < self.__Thd:
 					label_tag[i,j] = -1;
 					numShadows += 1;
+		validNum = numLits+numShadows
 		print '######  %s shadow label #####' % filename
-		print '#Valid: ', numLits+numShadows, '('+str(int((numLits+numShadows)/self.__model.size*100))+'%)';
-		print '#Lits: ', numLits;
-		print '#Shadows: ', numShadows;
+		print '#Valid:', numLits+numShadows, '('+str(int(validNum/self.__model.size*100))+'%)';
+		print '#Lits:', numLits, '('+str(int(numLits/validNum*100))+'%)';
+		print '#Shadows:', numShadows, '('+str(int(numShadows/validNum*100))+'%)';
 		print '##################'
 
 		return label_tag;
 
+
+class Test():
+	def __init__(self, mat):
+		self.__mat = mat
+		self.__size = mat.shape
+		self.__grey = np.zeros(self.__size)
+		for (x, y), value in np.ndenumerate(mat):
+			if self.__mat[x, y] == 1:
+				self.__grey[x, y] = 255
+			elif self.__mat[x, y] == -1:
+				self.__grey[x, y] = 0
+			else:
+				self.__grey[x, y] = 128
+		self.__grey[1, 0] = 0
+		self.__grey[0, 1] = 255
+
+	def draw(self):
+		plt.imshow(self.__grey, cmap='Greys_r')
+		plt.axis('off')
+		plt.show()
+
+
 if __name__ == '__main__':
-	est = Estimation(model = Model().get_model());
+	est = Estimation(model=Model().get_model(),thu=0.75,thd=0.6);
 	for f in os.listdir(DATA_SOURCE_PATH):
 		if f.endswith('.png'):
 			est.clear_label();
-			est.get_shadows_label_tag(filename = f);
+			tag_mat = est.get_shadows_label_tag(filename = f);
+			teson = Test(tag_mat)
+			teson.draw()
+			break
 
 
 
