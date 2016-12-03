@@ -17,7 +17,7 @@ class Calculation:
 
 	def __init__(self):
 		self.__model = Model().get_model();
-		self.__est = Estimation(model=self.__model,thu=0.75,thd=0.6);
+		self.__est = Estimation(model=self.__model,thu=0.75,thd=0.6); # thu: thereshold-up	thd: thereshold-down
 
 	def process(self,fname):
 		self.detect_boundary(fname, r_neigh=1);

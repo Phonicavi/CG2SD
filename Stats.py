@@ -41,7 +41,7 @@ class Model:
 		# NEED TO set self.__width, self.__height, self.__sample_num, self.__model in this function
 		# self.__model should be double nparray with size(width, height)
 		if os.path.exists(Model.GetIRModelPath()):
-			print ">>>> Loading IR Model ..."
+			print ">>>>> Loading IR Model ..."
 			self.__height,self.__width,self.__sample_num,self.__model = joblib.load(Model.GetIRModelPath())
 		else:
 			m_default = 500
@@ -177,14 +177,14 @@ class Test():
 
 
 if __name__ == '__main__':
-	est = Estimation(model=Model().get_model(),thu=0.75,thd=0.6);
+	est = Estimation(model=Model().get_model(),thu=0.75,thd=0.45);
 	for f in os.listdir(DATA_SOURCE_PATH):
 		if f.endswith('.png'):
 			est.clear_label();
 			tag_mat = est.get_shadows_label_tag(filename = f);
-			teson = Test(tag_mat)
-			teson.draw()
-			break
+			# teson = Test(tag_mat)
+			# teson.draw()
+			# break
 
 
 
