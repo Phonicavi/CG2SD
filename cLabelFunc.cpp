@@ -66,7 +66,7 @@ void _label_thread(int id, double **lbs, double ** gs, double ** model) {
 	unordered_set<int> can;
 	// int *can = new int[K];
 	for (int i=id; i<M; i+=CORE_NUM){
-		if (id == 0)printf(" Labeling %d%%\r",(i+4)*100/M),fflush(stdout);
+		if (id == 0)printf(" Labeling %.1f%%\r",(i+CORE_NUM)*100.0/M),fflush(stdout);
 		for (int j=0; j<N; ++j) {
 			lbs[i][j] = generate_label_fast(K,M*N,can,i,j,gs,model);
 			// lbs[i][j] = generate_label(K,M*N,can,i,j,gs,model);

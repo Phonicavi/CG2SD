@@ -182,8 +182,8 @@ if __name__ == '__main__':
 		if f.endswith('.png'):
 			est.clear_label();
 			tag_mat = est.get_shadows_label_tag(filename = f);
-			# teson = Test(tag_mat)
-			# teson.draw()
+			teson = Test(tag_mat)
+			teson.draw()
 			# break
 
 

@@ -46,7 +46,7 @@ class PlyUtils:
 		return RESULT_SOURCE_PATH+'3dpoint.dat'
 
 	@staticmethod
-	def Simplified(point):
+	def Get_pos(point):
 		return (point[0],point[1],point[2])
 	@staticmethod
 	def Get_normals(point):
