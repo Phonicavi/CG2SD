@@ -85,6 +85,7 @@ class Calculation:
 	def detect_boundary(self, fname, r_neigh, b0=0.2, xita_crease=45):
 		BScores = {} # {(x,y,z,nx,ny,nz):Bpos}  type(Bpos):numpy.array(shape=(3,1))
 		if os.path.exists(Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease)):
+			pass
 			BScores = joblib.load(Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease))
 		else:
 			self.__est.clear_label();
@@ -107,12 +108,12 @@ class Calculation:
 				if thisLabel == 0: continue;
 
 				Nx = pu.find_point_within_rad(PlyUtils.Get_pos(point),r_neigh); 
-				if thisLabel == -1:     # if shadow, then ignore the unlabeled
-					for i in xrange(len(Nx)):
-						node = Nx[i];
-						if label_tag[cu.trans3d_2d(node[0],node[1])] == 0:   # means unlabeled
-							Nx[i] = [];
-					while [] in Nx: Nx.remove([]);
+				# if thisLabel == -1:     # if shadow, then ignore the unlabeled
+				# 	for i in xrange(len(Nx)):
+				# 		node = Nx[i];
+				# 		if label_tag[cu.trans3d_2d(node[0],node[1])] == 0:   # means unlabeled
+				# 			Nx[i] = [];
+				# 	while [] in Nx: Nx.remove([]);
 
 				Nx_star = [];
 				for neigh in Nx:
