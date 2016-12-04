@@ -162,11 +162,13 @@ class Test():
 		self.__grey = np.zeros(self.__size)
 		for (x, y), value in np.ndenumerate(mat):
 			if self.__mat[x, y] == 1:
-				self.__grey[x, y] = 255
+				self.__grey[x, y] = 128
 			elif self.__mat[x, y] == -1:
 				self.__grey[x, y] = 0
+			elif self.__mat[x, y] == 0:
+				self.__grey[x, y] = 64
 			else:
-				self.__grey[x, y] = 128
+				self.__grey[x, y] = 255
 		self.__grey[1, 0] = 0
 		self.__grey[0, 1] = 255
 
