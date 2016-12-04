@@ -41,46 +41,47 @@ class Calculation:
 		return np.array([xSum/num, ySum/num, zSum/num]);
 
 	def detect_boundary(self, fname, r_neigh, b0=0.2, xita_crease =45):
-		if os.path.exists(Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease)):
-			return joblib.load(Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease))
-
-		self.__est.clear_label();
-		label_tag = self.__est.get_shadows_label_tag(filename = fname);
-		assert(self.__model.size == label_tag.size);
-
-		pu = PlyUtils();
-		cu = CoordUtils();
-
-		all_points = pu.get_all_3d_points();   # currently all 3d points are considered
 		BScores = {} # {(x,y,z,nx,ny,nz):Bpos}  type(Bpos):numpy.array(shape=(1,3))
+		if os.path.exists(Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease)):
+			BScores = joblib.load(Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease))
+		else:
+			self.__est.clear_label();
+			label_tag = self.__est.get_shadows_label_tag(filename = fname);
+			assert(self.__model.size == label_tag.size);
 
-		cnt = 0
-		pbar = ProgressBar(maxval=len(all_points)).start()
-		for point in all_points:
-			cnt += 1;
-			pbar.update(cnt)
-			sys.stdout.flush();
-			thisLabel = label_tag[cu.trans3d_2d(point[0],point[1])]
-			if thisLabel == 0: continue;
+			pu = PlyUtils();
+			cu = CoordUtils();
 
-			Nx = pu.find_point_within_rad(PlyUtils.Simplified(point),r_neigh); # TODO: (Qiu Feng)remove unlabled?
-			# print "#Neigh", len(Nx)
-			Nx_star = [];
-			for neigh in Nx:
-				neiLabel = label_tag[cu.trans3d_2d(neigh[0],neigh[1])];
-				# TODO: (Qiu Feng) specify the “contrary”
-				if neiLabel != thisLabel and self.__is_angle_less_than(PlyUtils.Get_normals(neigh),PlyUtils.Get_normals(point),xita_crease):
-					Nx_star.append(neigh)
+			all_points = pu.get_all_3d_points();   # currently all 3d points are considered
+			
 
-			if (len(Nx_star) == 0):
-				continue;
-			centroid = self.__get_centroid([PlyUtils.Simplified(p) for p in Nx_star]);
+			cnt = 0
+			pbar = ProgressBar(maxval=len(all_points)).start()
+			for point in all_points:
+				cnt += 1;
+				pbar.update(cnt)
+				sys.stdout.flush();
+				thisLabel = label_tag[cu.trans3d_2d(point[0],point[1])]
+				if thisLabel == 0: continue;
 
-			Bpos = -1.0*thisLabel*(len(Nx_star)/len(Nx))*(centroid-np.array(PlyUtils.Simplified(point)))
-			if LA.norm(Bpos) > b0:
-				BScores[point] = Bpos;
-		pbar.finish();
-		joblib.dump(BScores,Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease),compress=3);
+				Nx = pu.find_point_within_rad(PlyUtils.Simplified(point),r_neigh); # TODO: (Qiu Feng)remove unlabled?
+				# print "#Neigh", len(Nx)
+				Nx_star = [];
+				for neigh in Nx:
+					neiLabel = label_tag[cu.trans3d_2d(neigh[0],neigh[1])];
+					# TODO: (Qiu Feng) specify the “contrary”
+					if neiLabel != thisLabel and self.__is_angle_less_than(PlyUtils.Get_normals(neigh),PlyUtils.Get_normals(point),xita_crease):
+						Nx_star.append(neigh)
+
+				if (len(Nx_star) == 0):
+					continue;
+				centroid = self.__get_centroid([PlyUtils.Simplified(p) for p in Nx_star]);
+
+				Bpos = -1.0*thisLabel*(len(Nx_star)/len(Nx))*(centroid-np.array(PlyUtils.Simplified(point)))
+				if LA.norm(Bpos) > b0:
+					BScores[point] = Bpos;
+			pbar.finish();
+			joblib.dump(BScores,Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease),compress=3);
 
 		print "#Valid boundary pixel:",len(BScores)
 		# print BScores

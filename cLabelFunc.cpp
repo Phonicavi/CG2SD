@@ -26,7 +26,7 @@ for J := N-M + 1 to N do
         insert J in S
 */
 double generate_label_fast(const int n, const int max, unordered_set<int> &g, const int x, const int y, double **gs, double **model) {
-    int m=0;
+    int m=0, cur;
     int numLits = 0;
 	int numShadows = 0;
 	double R;
@@ -34,17 +34,11 @@ double generate_label_fast(const int n, const int max, unordered_set<int> &g, co
 
 	for (int i=max-n; i<max; ++i){
 		int t = rand()%i;
-		if (g.find(t) == g.end()) {
-			g.insert(t);
-			R = getR(x,y,t/M,t%M,gs,model);
-			if (R>T) numLits++;
-			else if (R<1.0/T) numShadows++;
-		} else {
-			g.insert(i);
-			R = getR(x,y,i/M,i%M,gs,model);
-			if (R>T) numLits++;
-			else if (R<1.0/T) numShadows++;
-		}
+		cur = g.find(t) == g.end()?t:i;
+		g.insert(cur);
+		R = getR(x,y,cur/M,cur%M,gs,model);
+		if (R>T) numLits++;
+		else if (R<1.0/T) numShadows++;
 	}
 	return double(numLits)/(numShadows+numLits);
  }
