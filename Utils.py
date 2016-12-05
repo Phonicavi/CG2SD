@@ -94,10 +94,10 @@ class PlyUtils:
 	def find_point_within_rad(self,pos,rad):  # pos=(x,y,z)
 		return [PlyUtils._3dpoint_seemed[id] for id in PlyUtils.KDTree.query_ball_point(list(pos),rad)];
 
-	
 
 
-	
+
+
 
 
 if __name__ == '__main__':

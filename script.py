@@ -18,8 +18,8 @@ if __name__ == '__main__':
 				x3 = p3[0]
 				y3 = p3[1]
 				(x, y) = cu.trans3d_2d(x3, y3)
-				tag_mat[x, y] = 5 # boundary: 5
-			teson = Test(tag_mat)
-			teson.draw()
+				tag_mat[x, y] = 2 # boundary: 2
+			# teson = Test(tag_mat)
+			# teson.draw()
 			# break
 

@@ -16,9 +16,24 @@ class Model:
 		return Model.Rgb2grey(mpimg.imread(filename))*1.0     # make it float
 
 	@staticmethod
+	def RgbFromFileName(filename):
+		return mpimg.imread(filename)
+
+	@staticmethod
 	def Rgb2grey(rgb):
 		# call with Model.Rgb2grey(rgb)
 		return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+
+	@staticmethod
+	def Multigrey(grey):
+		w = grey.shape[0]
+		h = grey.shape[1]
+		mg = np.zeros((w, h, 3))
+		for x in xrange(w):
+			for y in xrange(h):
+				for l in xrange(3):
+					mg[x, y, l] = grey[x, y]
+		return mg
 
 	@staticmethod
 	def GetIRModelPath():
@@ -156,26 +171,51 @@ class Estimation:
 
 
 class Test():
-	def __init__(self, mat):
+	def __init__(self):
+		pass
+
+	def mat_init(self, mat):
 		self.__mat = mat
 		self.__size = mat.shape
 		self.__grey = np.zeros(self.__size)
 		for (x, y), value in np.ndenumerate(mat):
 			if self.__mat[x, y] == 1:
-				self.__grey[x, y] = 128
+				self.__grey[x, y] = 0.5
 			elif self.__mat[x, y] == -1:
 				self.__grey[x, y] = 0
 			elif self.__mat[x, y] == 0:
-				self.__grey[x, y] = 64
-			else:
-				self.__grey[x, y] = 255
-		self.__grey[1, 0] = 0
-		self.__grey[0, 1] = 255
+				self.__grey[x, y] = 0.25
+			elif self.__mat[x, y] == 2:
+				self.__grey[x, y] = 1
 
 	def draw(self):
 		plt.imshow(self.__grey, cmap='Greys_r')
 		plt.axis('off')
 		plt.show()
+
+	@staticmethod
+	def drawRGB(I, save_path):
+		plt.imshow(I)
+		plt.axis('off')
+		# plt.show()
+		plt.savefig(save_path)
+		plt.close()
+
+	@staticmethod
+	def drawDirection(I, center, directVect, save_path, scale=30):
+		plt.imshow(I)
+		plt.axis('off')
+		centp = (int(center[0]), int(center[1]))
+		endsp = (int(center[0]+scale*directVect[0]), int(center[1]+scale*directVect[1]))
+		print "[static] center-point:", centp
+		print "[static] end-point:", endsp
+		plt.plot((centp[0], endsp[0]), (centp[1], endsp[1]), 'r', linewidth=1.0)
+		plt.plot(endsp[0], endsp[1], 'r+')
+		# plt.show()
+		plt.savefig(save_path)
+		plt.close()
+
+
 
 
 if __name__ == '__main__':
@@ -184,8 +224,6 @@ if __name__ == '__main__':
 		if f.endswith('.png'):
 			est.clear_label();
 			tag_mat = est.get_shadows_label_tag(filename = f);
-			teson = Test(tag_mat)
-			teson.draw()
 			# break
 
 

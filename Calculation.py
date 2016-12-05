@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*- 
 from __future__ import division
 from Config import *
-from Stats import Model,Estimation
+from Stats import Model,Estimation,Test
 from Utils import CoordUtils, PlyUtils
 import numpy as np
 from numpy import linalg as LA
@@ -15,6 +15,14 @@ class Calculation:
 		if not os.path.exists(RESULT_SOURCE_PATH+'boundary_data/'):
 			os.mkdir(RESULT_SOURCE_PATH+'boundary_data/');
 		return RESULT_SOURCE_PATH+'boundary_data/('+picfilename+'_'+str((r_neigh,b0,xita_crease))+').bddata';
+
+
+	@staticmethod
+	def GetDirectionResultPath(picfilename,r_neigh,b0,xita_crease):
+		if not os.path.exists(RESULT_SOURCE_PATH+'direction_result_data/'):
+			os.mkdir(RESULT_SOURCE_PATH+'direction_result_data/');
+		return RESULT_SOURCE_PATH+'direction_result_data/('+picfilename+'_'+str((r_neigh,b0,xita_crease))+').png';
+
 
 	def __init__(self):
 		self.__model = Model().get_model();
@@ -32,8 +40,26 @@ class Calculation:
 	def process(self,fname):
 		print ">>>>> begin process",fname
 		bscores = self.detect_boundary(fname, r_neigh=1.2);
+		print ">>>>> show boundary ... "
+		originRGB = Model.RgbFromFileName(DATA_SOURCE_PATH+fname)
+		originGrey = Model.Rgb2grey(originRGB)
+		multigrey = Model.Multigrey(originGrey)
+		cu = CoordUtils()
+		for p3 in bscores:
+			x3 = p3[0]
+			y3 = p3[1]
+			(x, y) = cu.trans3d_2d(x3, y3)
+			multigrey[x, y, 0] = 1
+			multigrey[x, y, 1] = 0
+			multigrey[x, y, 2] = 0
+		Test.drawRGB(multigrey, save_path=RESULT_SOURCE_PATH+'boundary_result_data/'+fname)
+		print ">>>>> boundary result finished"
 		target_hyp,max_inlier = self.ransac(bscores);
 		print ">>>>> final sun direction:", target_hyp," with %d inliers" % max_inlier
+		center = (originRGB.shape[0]/2, originRGB.shape[1]/2)
+		dx,dy,dz = self.__standard_normals((target_hyp[0], target_hyp[1], 0))
+		Test.drawDirection(originRGB,center=center,directVect=(dx,dy),save_path=RESULT_SOURCE_PATH+'direction_result_data/'+fname)
+		print ">>>>> direction result finished"
 
 	@classmethod
 	def __standard_normals(cls,v):
@@ -98,7 +124,6 @@ class Calculation:
 			cu = CoordUtils();
 
 			all_points = pu.get_all_3d_points();   # currently all 3d points are considered
-			
 
 			cnt = 0
 			pbar = ProgressBar(maxval=len(all_points)).start()
@@ -155,7 +180,7 @@ class Calculation:
 		ret = []
 		# 30,45,60,80
 		alpha_xita = {
-			PI/6:(200,0),
+			# PI/6:(200,0),
 			PI/4:(200,0),
 			PI/3:(200,0),
 			PI*0.48:(200,0),
@@ -177,7 +202,7 @@ class Calculation:
 		return self.__standard_normals((-self.__clf.coef_[0],-self.__clf.coef_[1],1))
 
 
-	def ransac(self, bscores, angel_e=10, stop_e=0.1, inner_max_iter=100, outter_max_iter=30):
+	def ransac(self, bscores, angel_e=10, stop_e=0.1, inner_max_iter=100, outter_max_iter=20):
 		import random
 		## Policy
 		USE_BINS = False;
@@ -310,8 +335,17 @@ class Calculation:
 
 
 if __name__ == '__main__':
-	calc = Calculation();
-	calc.process(fname = "meas-00010-00000.png");
+	calc = Calculation()
+	cnt = 0
+	total = 10
+	for i in xrange(5,383):
+		fn = "meas-%05d-00000.png" % i
+		# print fn
+		calc.process(fname=fn)
+		cnt += 1
+		if cnt >= total:
+			break
+
 
 
 
