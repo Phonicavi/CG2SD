@@ -18,10 +18,10 @@ class Calculation:
 
 
 	@staticmethod
-	def GetDirectionResultPath(picfilename,r_neigh,b0,xita_crease):
+	def GetDirectionResultPath(picfilename):
 		if not os.path.exists(RESULT_SOURCE_PATH+'direction_result_data/'):
 			os.mkdir(RESULT_SOURCE_PATH+'direction_result_data/');
-		return RESULT_SOURCE_PATH+'direction_result_data/('+picfilename+'_'+str((r_neigh,b0,xita_crease))+').png';
+		return RESULT_SOURCE_PATH+'direction_result_data/'+picfilename;
 
 
 	def __init__(self):
@@ -54,11 +54,11 @@ class Calculation:
 			multigrey[x, y, 2] = 0
 		Test.drawRGB(multigrey, save_path=RESULT_SOURCE_PATH+'boundary_result_data/'+fname)
 		print ">>>>> boundary result finished"
-		target_hyp,max_inlier = self.ransac(bscores);
+		target_hyp,max_inlier = self.ransac(bscores,angel_e=5);
 		print ">>>>> final sun direction:", target_hyp," with %d inliers" % max_inlier
 		center = (originRGB.shape[0]/2, originRGB.shape[1]/2)
 		dx,dy,dz = self.__standard_normals((target_hyp[0], target_hyp[1], 0))
-		Test.drawDirection(originRGB,center=center,directVect=(dx,dy),save_path=RESULT_SOURCE_PATH+'direction_result_data/'+fname)
+		Test.drawDirection(originRGB,center=center,directVect=(dx,dy),save_path=Calculation.GetDirectionResultPath(fname))
 		print ">>>>> direction result finished"
 
 	@classmethod
@@ -111,7 +111,7 @@ class Calculation:
 		print "################"
 
 
-	def detect_boundary(self, fname, r_neigh, b0=0.2, xita_crease=45):
+	def detect_boundary(self, fname, r_neigh, b0=0.1, xita_crease=45):
 		BScores = {} # {(x,y,z,nx,ny,nz):Bpos}  type(Bpos):numpy.array(shape=(3,1))
 		if os.path.exists(Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease)):
 			BScores = joblib.load(Calculation.GetBoundaryDataPath(fname,r_neigh,b0,xita_crease))
@@ -202,10 +202,10 @@ class Calculation:
 		return self.__standard_normals((-self.__clf.coef_[0],-self.__clf.coef_[1],1))
 
 
-	def ransac(self, bscores, angel_e=10, stop_e=0.1, inner_max_iter=100, outter_max_iter=20):
+	def ransac(self, bscores, angel_e=10, stop_e=0.2, inner_max_iter=80, outter_max_iter=30):
 		import random
 		## Policy
-		USE_BINS = False;
+		USE_BINS = True;
 		FILTER_BOUNDERY_VEC = False;
 		print "[USE_BINS]:",USE_BINS
 		print "[FILTER_BOUNDERY_VEC]:",FILTER_BOUNDERY_VEC
@@ -337,8 +337,8 @@ class Calculation:
 if __name__ == '__main__':
 	calc = Calculation()
 	cnt = 0
-	total = 10
-	for i in xrange(5,383):
+	total = 1
+	for i in xrange(3,383):
 		fn = "meas-%05d-00000.png" % i
 		# print fn
 		calc.process(fname=fn)
