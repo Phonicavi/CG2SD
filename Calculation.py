@@ -54,7 +54,7 @@ class Calculation:
 			multigrey[x, y, 2] = 0
 		Test.drawRGB(multigrey, save_path=RESULT_SOURCE_PATH+'boundary_result_data/'+fname)
 		print ">>>>> boundary result finished"
-		target_hyp,max_inlier = self.ransac(bscores,angel_e=5);
+		target_hyp,max_inlier = self.ransac(bscores);
 		print ">>>>> final sun direction:", target_hyp," with %d inliers" % max_inlier
 		center = (originRGB.shape[0]/2, originRGB.shape[1]/2)
 		dx,dy,dz = self.__standard_normals((target_hyp[0], target_hyp[1], 0))
@@ -202,7 +202,7 @@ class Calculation:
 		return self.__standard_normals((-self.__clf.coef_[0],-self.__clf.coef_[1],1))
 
 
-	def ransac(self, bscores, angel_e=10, stop_e=0.2, inner_max_iter=80, outter_max_iter=30):
+	def ransac(self, bscores, angel_e=15, stop_e=0.2, inner_max_iter=60, outter_max_iter=50):
 		import random
 		## Policy
 		USE_BINS = True;
@@ -337,14 +337,16 @@ class Calculation:
 if __name__ == '__main__':
 	calc = Calculation()
 	cnt = 0
-	total = 1
-	for i in xrange(3,383):
+	total = 50
+	for i in xrange(21,383):
 		fn = "meas-%05d-00000.png" % i
-		# print fn
-		calc.process(fname=fn)
-		cnt += 1
-		if cnt >= total:
-			break
+		try:
+			calc.process(fname=fn)
+			cnt += 1
+			if cnt >= total:
+				break
+		except:
+			pass
 
 
 
