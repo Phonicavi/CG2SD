@@ -18,10 +18,10 @@ class Calculation:
 
 
 	@staticmethod
-	def GetDirectionResultPath(picfilename):
+	def GetDirectionResultPath(picfilename,direction):
 		if not os.path.exists(RESULT_SOURCE_PATH+'direction_result_data/'):
 			os.mkdir(RESULT_SOURCE_PATH+'direction_result_data/');
-		return RESULT_SOURCE_PATH+'direction_result_data/'+picfilename;
+		return RESULT_SOURCE_PATH+'direction_result_data/'+picfilename[:-4]+str(direction)+'.png';
 
 
 	def __init__(self):
@@ -58,7 +58,7 @@ class Calculation:
 		print ">>>>> final sun direction:", target_hyp," with %d inliers" % max_inlier
 		center = (originRGB.shape[0]/2, originRGB.shape[1]/2)
 		dx,dy,dz = self.__standard_normals((target_hyp[0], target_hyp[1], 0))
-		Test.drawDirection(originRGB,center=center,directVect=(dx,dy),save_path=Calculation.GetDirectionResultPath(fname))
+		Test.drawDirection(originRGB,center=center,directVect=(dx,dy),save_path=Calculation.GetDirectionResultPath(fname,target_hyp))
 		print ">>>>> direction result finished"
 
 	@classmethod
@@ -136,11 +136,13 @@ class Calculation:
 
 				Nx = pu.find_point_within_rad(PlyUtils.Get_pos(point),r_neigh); 
 				# if thisLabel == -1:     # if shadow, then ignore the unlabeled
-				# 	for i in xrange(len(Nx)):
+				# 	i=0
+				# 	while i<len(Nx):
 				# 		node = Nx[i];
 				# 		if label_tag[cu.trans3d_2d(node[0],node[1])] == 0:   # means unlabeled
-				# 			Nx[i] = [];
-				# 	while [] in Nx: Nx.remove([]);
+				# 			del x[i];
+				# 		else:
+				# 			i+=1;
 
 				Nx_star = [];
 				for neigh in Nx:
@@ -263,6 +265,7 @@ class Calculation:
 
 			## Step-3 loop
 			inner_iter = 0;
+			repeat_code_set = set();
 			while inner_iter < inner_max_iter:
 				inner_iter += 1;
 				### Step-3.1 filter out specific boundary points and throw into bins
@@ -308,29 +311,23 @@ class Calculation:
 				pre_hyp = cur_hyp;
 				cur_hyp = self.__generate_hyp(inliers);
 				inner_max_inliers_cnt = inliers_cnt
+				hashcode = hash(str(inliers_cnt) + str(cur_hyp) + str(pre_hyp));
+				if hashcode in repeat_code_set:
+					break;
+				else:
+					repeat_code_set.add(hashcode)
 				print ">>>>>> inner_max_inliers_cnt",inner_max_inliers_cnt;
 
 				print ">>>>> update hyp", pre_hyp,'===>>',cur_hyp
 				# print select_bins
 				if (self.Get_angel_degree(pre_hyp,cur_hyp)<stop_e):
-					print self.Get_angel_degree(pre_hyp,cur_hyp)
+					# print self.Get_angel_degree(pre_hyp,cur_hyp)
 					break;
 
 			if inner_max_inliers_cnt > opt_max_inner_cnt:
 				opt_max_inner_cnt = inner_max_inliers_cnt;
 				opt_hyp = cur_hyp
 		return opt_hyp,opt_max_inner_cnt
-
-
-
-
-		# normalspp = (normals.__array_interface__['data'][0] \
-		# 		+ np.arange(normals.shape[0])*normals.strides[0]).astype(np.uintp) 
-		# bvspp = (bvs.__array_interface__['data'][0] \
-		# 		+ np.arange(bvs.shape[0])*bvs.strides[0]).astype(np.uintp) 
-
-		# res = self.__ransac(len(bscores),normalspp,bvspp)
-
 
 
 
