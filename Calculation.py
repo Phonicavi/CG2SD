@@ -16,12 +16,17 @@ class Calculation:
 			os.mkdir(RESULT_SOURCE_PATH+'boundary_data/');
 		return RESULT_SOURCE_PATH+'boundary_data/('+picfilename+'_'+str((r_neigh,b0,xita_crease))+').bddata';
 
-
 	@staticmethod
 	def GetDirectionResultPath(picfilename,direction):
 		if not os.path.exists(RESULT_SOURCE_PATH+'direction_result_data/'):
 			os.mkdir(RESULT_SOURCE_PATH+'direction_result_data/');
 		return RESULT_SOURCE_PATH+'direction_result_data/'+picfilename[:-4]+str(direction)+'.png';
+
+	@staticmethod
+	def GetBoundaryGraphPath(picfilename):
+		if not os.path.exists(RESULT_SOURCE_PATH+'boundary_result_data/'):
+			os.mkdir(RESULT_SOURCE_PATH+'boundary_result_data/');
+		return RESULT_SOURCE_PATH+'boundary_result_data/';
 
 
 	def __init__(self):
@@ -52,7 +57,7 @@ class Calculation:
 			multigrey[x, y, 0] = 1
 			multigrey[x, y, 1] = 0
 			multigrey[x, y, 2] = 0
-		Test.drawRGB(multigrey, save_path=RESULT_SOURCE_PATH+'boundary_result_data/'+fname)
+		Test.drawRGB(multigrey, save_path=Calculation.GetBoundaryGraphPath(fname))
 		print ">>>>> boundary result finished"
 		target_hyp,max_inlier = self.ransac(bscores);
 		print ">>>>> final sun direction:", target_hyp," with %d inliers" % max_inlier
@@ -232,19 +237,7 @@ class Calculation:
 			print "\n##### OUTTER ITER %d ######\n" % out_iter
 			out_iter += 1;
 			## Step-1: Initially, randomly find two vectors as the initial vectors
-			# best_two = [(-1,0,[0,0,0]),(-1,0,[0,0,0])];
-			# for idx in xrange(len(normals)):
-			# 	# print best_two
-				
-			# 	angel = self.Get_angel_degree(normals[idx],bvs[idx]);
-			# 	if (angel > best_two[0][1] and list(normals[idx]) != best_two[0][2]):
-			# 		best_two[1] = best_two[0];
-			# 		best_two[0] = (idx,angel,list(normals[idx]));
-			# 	elif (angel > best_two[1][1] and list(normals[idx]) != best_two[1][2] and list(normals[idx]) != best_two[0][2]):
-			# 		best_two[1] = (idx,angel,list(normals[idx]));
-			# print pos[best_two[0][0]],pos[best_two[1][0]]
 
-			# init_one, init_two = normals[best_two[0][0]], normals[best_two[1][0]]
 			init_one, init_two = random.sample(set([str(list(item)) for item in normals]),2);
 			init_one = eval(init_one);
 			init_two = eval(init_two)
@@ -316,7 +309,7 @@ class Calculation:
 					break;
 				else:
 					repeat_code_set.add(hashcode)
-				print ">>>>>> inner_max_inliers_cnt",inner_max_inliers_cnt;
+				print ">>>>> inner_max_inliers_cnt",inner_max_inliers_cnt;
 
 				print ">>>>> update hyp", pre_hyp,'===>>',cur_hyp
 				# print select_bins
@@ -334,8 +327,8 @@ class Calculation:
 if __name__ == '__main__':
 	calc = Calculation()
 	cnt = 0
-	total = 50
-	for i in xrange(21,383):
+	total = 60
+	for i in xrange(200,383):
 		fn = "meas-%05d-00000.png" % i
 		try:
 			calc.process(fname=fn)
