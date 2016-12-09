@@ -17,10 +17,11 @@ class Calculation:
 		return RESULT_SOURCE_PATH+'boundary_data/('+picfilename+'_'+str((r_neigh,b0,xita_crease))+').bddata';
 
 	@staticmethod
-	def GetDirectionResultPath(picfilename,direction):
-		if not os.path.exists(RESULT_SOURCE_PATH+'direction_result_data/'):
-			os.mkdir(RESULT_SOURCE_PATH+'direction_result_data/');
-		return RESULT_SOURCE_PATH+'direction_result_data/'+picfilename[:-4]+str(direction)+'.png';
+	def GetDirectionResultPath(picfilename,direction,use_bins):
+		path = RESULT_SOURCE_PATH+'direction_result_data/'+("USE_BINS" if use_bins else "NO_BINS")+'/'
+		if not os.path.exists(path):
+			os.makedirs(path);
+		return path+picfilename[:-4]+str(direction)+'.png';
 
 	@staticmethod
 	def GetBoundaryGraphPath(picfilename):
@@ -42,7 +43,7 @@ class Calculation:
 		# self.__ransac.argtypes = [ctypes.c_int, _doublepp, _doublepp] 
 		# self.__ransac.restype = [ctypes.POINTER(ctypes.c_double)]
 
-	def process(self,fname):
+	def process(self,fname, detect_boundary_only=False):
 		print ">>>>> begin process",fname
 		bscores = self.detect_boundary(fname, r_neigh=1.2);
 		print ">>>>> show boundary ... "
@@ -59,11 +60,15 @@ class Calculation:
 			multigrey[x, y, 2] = 0
 		Test.drawRGB(multigrey, save_path=Calculation.GetBoundaryGraphPath(fname))
 		print ">>>>> boundary result finished"
-		target_hyp,max_inlier = self.ransac(bscores);
+		if detect_boundary_only == True: return
+		## Policy
+		USE_BINS = True;
+		FILTER_BOUNDERY_VEC = False;
+		target_hyp,max_inlier = self.ransac(bscores,USE_BINS=USE_BINS,FILTER_BOUNDERY_VEC=FILTER_BOUNDERY_VEC);
 		print ">>>>> final sun direction:", target_hyp," with %d inliers" % max_inlier
 		center = (originRGB.shape[0]/2, originRGB.shape[1]/2)
 		dx,dy,dz = self.__standard_normals((target_hyp[0], target_hyp[1], 0))
-		Test.drawDirection(originRGB,center=center,directVect=(dx,dy),save_path=Calculation.GetDirectionResultPath(fname,target_hyp))
+		Test.drawDirection(originRGB,center=center,directVect=(dx,-dy),save_path=Calculation.GetDirectionResultPath(fname,target_hyp,USE_BINS))
 		print ">>>>> direction result finished"
 
 	@classmethod
@@ -209,11 +214,8 @@ class Calculation:
 		return self.__standard_normals((-self.__clf.coef_[0],-self.__clf.coef_[1],1))
 
 
-	def ransac(self, bscores, angel_e=15, stop_e=0.2, inner_max_iter=60, outter_max_iter=50):
+	def ransac(self, bscores, angel_e=15, stop_e=0.2, inner_max_iter=60, outter_max_iter=50, USE_BINS=True, FILTER_BOUNDERY_VEC = False):
 		import random
-		## Policy
-		USE_BINS = True;
-		FILTER_BOUNDERY_VEC = False;
 		print "[USE_BINS]:",USE_BINS
 		print "[FILTER_BOUNDERY_VEC]:",FILTER_BOUNDERY_VEC
 
@@ -327,11 +329,11 @@ class Calculation:
 if __name__ == '__main__':
 	calc = Calculation()
 	cnt = 0
-	total = 60
-	for i in xrange(200,383):
+	total = 150
+	for i in xrange(1,383):
 		fn = "meas-%05d-00000.png" % i
 		try:
-			calc.process(fname=fn)
+			calc.process(fname=fn,detect_boundary_only=False)
 			cnt += 1
 			if cnt >= total:
 				break
