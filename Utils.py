@@ -32,6 +32,13 @@ class CoordUtils:
 		(ax32,bx32,ay32,by32) = self.__cof32;
 		return (int(round(ay32*y+by32)),int(round(ax32*x+bx32)));
 
+	def scale3d_2d(self,x,y):               # for vector
+		x2d = CoordUtils.maxX2d-CoordUtils.minX2d;
+		y2d = CoordUtils.maxY2d-CoordUtils.minY2d;
+		x3d = CoordUtils.maxX3d-CoordUtils.minX3d;
+		y3d = CoordUtils.maxY3d-CoordUtils.minY3d;
+		return (x2d/x3d)*x,(y2d/y3d)*y
+
 class PlyUtils:
 	_3dpoint_seemed = None;
 	KDTree = None;
@@ -101,10 +108,9 @@ class PlyUtils:
 
 
 if __name__ == '__main__':
-	# cu = CoordUtils();
+	cu = CoordUtils();
+	print cu.scale3d_2d(1,2)
 	# # print cu.trans2d_3d(352.0,498.0)
 	# print cu.trans3d_2d(-39.1,70)
-	pu = PlyUtils();
-	print pu.standard_normals(8.026257391562132e-25, 7.754818242684634e-25, 7.331485945625383e-38);
 
 

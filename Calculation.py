@@ -66,8 +66,21 @@ class Calculation:
 		FILTER_BOUNDERY_VEC = False;
 		target_hyp,max_inlier = self.ransac(bscores,USE_BINS=USE_BINS,FILTER_BOUNDERY_VEC=FILTER_BOUNDERY_VEC);
 		print ">>>>> final sun direction:", target_hyp," with %d inliers" % max_inlier
-		center = (originRGB.shape[0]/2, originRGB.shape[1]/2)
-		dx,dy,dz = self.__standard_normals((target_hyp[0], target_hyp[1], 0))
+
+		# tmpPathPrefix = fname[:16];
+		# # print tmpPathPrefix
+		# for file in os.listdir("./result/direction_result_data/USE_BINS/"):
+		# 	if file.startswith(tmpPathPrefix):
+		# 		aaa = file[16:-4];
+		# 		# print aaa;
+		# 		target_hyp = eval(aaa);
+		# 		break;
+
+
+		# print target_hyp
+		center = (originRGB.shape[1]/2, originRGB.shape[0]/2)
+		dx,dy = cu.scale3d_2d(target_hyp[0], target_hyp[1])
+		dx,dy,dz = self.__standard_normals((dx,dy, 0))
 		Test.drawDirection(originRGB,center=center,directVect=(dx,-dy),save_path=Calculation.GetDirectionResultPath(fname,target_hyp,USE_BINS))
 		print ">>>>> direction result finished"
 
@@ -235,6 +248,7 @@ class Calculation:
 		out_iter = 0;
 		opt_hyp = None;
 		opt_max_inner_cnt = -1;
+		init_cur_hyp_set = set()
 		while out_iter<outter_max_iter:
 			print "\n##### OUTTER ITER %d ######\n" % out_iter
 			out_iter += 1;
@@ -247,6 +261,10 @@ class Calculation:
 			cur_hyp = self.__standard_normals(np.cross(init_one, init_two));
 
 			if cur_hyp[2] < 0: cur_hyp = (-cur_hyp[0],-cur_hyp[1],-cur_hyp[2])   # recorrect the sun direction
+			if str(cur_hyp) in init_cur_hyp_set:
+				continue;
+			else:
+				init_cur_hyp_set.add(str(cur_hyp))
 			pre_hyp = None;
 
 			## Step-2: Get pre-computed bin-vectors and quantize the surface normals
@@ -329,15 +347,16 @@ class Calculation:
 if __name__ == '__main__':
 	calc = Calculation()
 	cnt = 0
-	total = 150
-	for i in xrange(1,383):
+	total = 100
+	for i in xrange(105,383):
 		fn = "meas-%05d-00000.png" % i
 		try:
 			calc.process(fname=fn,detect_boundary_only=False)
 			cnt += 1
 			if cnt >= total:
 				break
-		except:
+		except Exception,e:
+			print e
 			pass
 
 
