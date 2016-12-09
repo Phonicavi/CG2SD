@@ -27,7 +27,7 @@ class Calculation:
 	def GetBoundaryGraphPath(picfilename):
 		if not os.path.exists(RESULT_SOURCE_PATH+'boundary_result_data/'):
 			os.mkdir(RESULT_SOURCE_PATH+'boundary_result_data/');
-		return RESULT_SOURCE_PATH+'boundary_result_data/';
+		return RESULT_SOURCE_PATH+'boundary_result_data/'+picfilename;
 
 
 	def __init__(self):
@@ -348,10 +348,10 @@ if __name__ == '__main__':
 	calc = Calculation()
 	cnt = 0
 	total = 100
-	for i in xrange(105,383):
+	for i in xrange(1,383):
 		fn = "meas-%05d-00000.png" % i
 		try:
-			calc.process(fname=fn,detect_boundary_only=False)
+			calc.process(fname=fn,detect_boundary_only=True)
 			cnt += 1
 			if cnt >= total:
 				break
