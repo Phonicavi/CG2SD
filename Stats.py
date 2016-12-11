@@ -145,7 +145,7 @@ class Estimation:
 		self.__labels = None;
 		gc.collect();
 
-	def get_shadows_label_tag(self, filename):
+	def get_shadows_label_tag(self, filename, stats_only=False):
 		self.get_shadows_label_prob(filename);
 		label_tag = np.zeros_like(self.__labels);
 		numLits = 0;
@@ -159,6 +159,8 @@ class Estimation:
 					label_tag[i,j] = -1;
 					numShadows += 1;
 		validNum = numLits+numShadows
+		if stats_only:
+			return numLits, numShadows, validNum
 		print '######  %s shadow label #####' % filename
 		print '#Valid:', numLits+numShadows, '('+str(int(validNum/self.__model.size*100))+'%)';
 		print '#Lits:', numLits, '('+str(int(numLits/validNum*100))+'%)';
@@ -219,7 +221,7 @@ class Test():
 
 
 if __name__ == '__main__':
-	est = Estimation(model=Model().get_model(),thu=0.75,thd=0.45);
+	est = Estimation(model=Model().get_model(),thu=ESTIMATION_THU,thd=ESTIMATION_THD);
 	for f in os.listdir(DATA_SOURCE_PATH):
 		if f.endswith('.png'):
 			est.clear_label();

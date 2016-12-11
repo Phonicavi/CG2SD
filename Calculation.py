@@ -32,7 +32,7 @@ class Calculation:
 
 	def __init__(self):
 		self.__model = Model().get_model();
-		self.__est = Estimation(model=self.__model,thu=0.75,thd=0.40); # thu: thereshold-up	thd: thereshold-down
+		self.__est = Estimation(model=self.__model,thu=ESTIMATION_THU,thd=ESTIMATION_THD); # thu: thereshold-up	thd: thereshold-down
 		self.__clf = linear_model.LinearRegression(n_jobs=4)
 
 		# self.__ransac = None
@@ -45,7 +45,7 @@ class Calculation:
 
 	def process(self,fname, detect_boundary_only=False):
 		print ">>>>> begin process",fname
-		bscores = self.detect_boundary(fname, r_neigh=1.2);
+		bscores = self.detect_boundary(fname, r_neigh=DETECT_BOUNDARY_R_NEIGH);
 		print ">>>>> show boundary ... "
 		originRGB = Model.RgbFromFileName(DATA_SOURCE_PATH+fname)
 		originGrey = Model.Rgb2grey(originRGB)
@@ -279,6 +279,7 @@ class Calculation:
 			## Step-3 loop
 			inner_iter = 0;
 			repeat_code_set = set();
+			inner_max_inliers_cnt = -1;
 			while inner_iter < inner_max_iter:
 				inner_iter += 1;
 				### Step-3.1 filter out specific boundary points and throw into bins
@@ -342,22 +343,215 @@ class Calculation:
 				opt_hyp = cur_hyp
 		return opt_hyp,opt_max_inner_cnt
 
+class DynamicPolicy:
+	@staticmethod
+	def GetModelPath():
+		return DYNAMIC_POLICY_PATH+"dynamicPolicy.mdl";
+	@staticmethod
+	def GetFeaturePath():
+		return DYNAMIC_POLICY_PATH+"dynamicPolicy_fea.data";
+	@staticmethod
+	def GetLabelPath():
+		return DYNAMIC_POLICY_PATH+"label.csv";
+	@staticmethod
+	def GetDPResultPath():
+		path = RESULT_SOURCE_PATH+"direction_result_data/dp/"
+		if not os.path.exists(path):
+			os.makedirs(path);
+		return path
+
+	def __init__(self):
+		self.clear();
+		self.dpmodel = self.__load_model() if os.path.exists(DynamicPolicy.GetModelPath()) else self.__generate_model();
+
+	def clear(self):
+		from sklearn.tree import DecisionTreeClassifier
+		from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier,GradientBoostingClassifier
+		from sklearn.naive_bayes import GaussianNB
+		from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+		from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis as QDA
+
+		self.testdata = None;
+		self.traindata = None;
+		self.split_ratio=0.95
+		self.classifiers = [
+		    ("Random Forest(entropy)",RandomForestClassifier(criterion = 'entropy',max_features = 'auto',n_jobs= -1)),
+		    ("Random Forest(gini)",RandomForestClassifier(criterion = 'gini', max_features = 'auto',n_jobs= -1)),
+		    ("QDA",QDA()),
+		    ("GBDT",GradientBoostingClassifier(max_features = 'auto')),
+		    ]
+
+
+	def evaluate_model(self):
+		pass
+
+	def __load_model(self):
+		return joblib.load(DynamicPolicy.GetModelPath());
+
+	def __generate_feature(self):
+		## step1: get all the name,label from label data
+		raw_data = {};
+		with open(DynamicPolicy.GetLabelPath(),'r+') as f1:
+			f1.readline();
+			for line in f1.readlines():
+				tmp = line.strip().split(',');
+				raw_data[tmp[0]] = [int(tmp[1])];
+
+		## step2: get average grayscale for every row
+		for fname in os.listdir(DATA_SOURCE_PATH):
+			if raw_data.has_key(fname[:-4]):
+				gs = Model.Rgb2greyFromFileName(DATA_SOURCE_PATH+fname);
+				raw_data[fname[:-4]].append(np.average(gs));
+		for item in raw_data.values():
+			print item
+			assert(len(item) == 2);
+
+		##step3: get label(shadow and sunlit) number, validnum
+		est = Estimation(model=Model().get_model(),thu=ESTIMATION_THU,thd=ESTIMATION_THD);
+		for fname in raw_data.keys():
+			est.clear_label();
+			nl,ns,vn = est.get_shadows_label_tag(filename = fname+'.png', stats_only=True);
+			raw_data[fname] += [nl,ns];
+		for item in raw_data.values():
+			print item
+			assert(len(item) == 4);
+
+		##step4 get boundary data
+		ca = Calculation();
+		for fname in raw_data.keys():
+			bscores = ca.detect_boundary(fname+'.png', r_neigh=DETECT_BOUNDARY_R_NEIGH);
+			bsnum = len(bscores);
+			aver_norm = 0;
+			mat = []
+			mat1 = []
+			for bs in bscores.keys():
+				aver_norm += LA.norm(bscores[bs])
+				mat.append(bscores[bs]);
+				mat1.append([bs[3],bs[4],bs[5]]);
+			aver_norm /= bsnum;
+			mat = np.array(mat);
+			mat1 = np.array(mat1);
+			vec_aver = np.mean(mat,0);  # 3
+			vec_aver1 = np.mean(mat1,0);  # 3
+			vec_var = np.var(mat,0); # 3
+			vec_var1 = np.var(mat1,0); # 3
+			raw_data[fname] += [bsnum, aver_norm,vec_aver[0],vec_aver[1],vec_aver[2], vec_var[0], vec_var[1], vec_var[2], \
+					vec_aver1[0],vec_aver1[1],vec_aver1[2], vec_var1[0], vec_var1[1], vec_var1[2]];
+		for item in raw_data.values():
+			print item
+			assert(len(item) == 18);
+
+		fea = [0 for i in xrange(len(raw_data))]
+
+		cnt = 0;
+		for item in raw_data.keys():
+			fea[cnt] = raw_data[item][1:];
+			fea[cnt].append(raw_data[item][0]);
+			cnt += 1;
+		joblib.dump(fea,DynamicPolicy.GetFeaturePath(),compress=3);
+		return fea
+
+
+	def __generate_model(self):
+		import random
+		from sklearn.metrics import classification_report as clfr
+		from sklearn.metrics import accuracy_score
+		fea = self.__generate_feature() if not os.path.exists(DynamicPolicy.GetFeaturePath()) else joblib.load(DynamicPolicy.GetFeaturePath());
+		from sklearn.grid_search import GridSearchCV as GSCV
+		from sklearn.svm import SVC
+		random.shuffle(fea);
+		self.traindata = fea[0:int(len(fea)*self.split_ratio)];
+		self.testdata = fea[int(len(fea)*self.split_ratio):];
+
+		TrainX = [item[:-1] for item in self.traindata]
+		TrainY = [item[-1] for item in self.traindata]
+		TestX = [item[:-1] for item in self.testdata]
+		TestY = [item[-1] for item in self.testdata]
+
+		best_clf = None;
+		best_acc = -1;
+		for name, clf in self.classifiers:
+			clf.fit(TrainX, TrainY)
+			PredY = clf.predict(TestX)
+			print name, accuracy_score(TestY,PredY)
+			if accuracy_score(TestY,PredY) > best_acc:
+				best_acc = accuracy_score(TestY,PredY);
+				best_clf = clf;
+			print(clfr(TestY, PredY))
+		joblib.dump(best_clf,DynamicPolicy.GetModelPath(),compress=3);
+
+		return best_clf
+	def select(self,fname):
+		print '>>>>> Selecting',fname
+		fn = fname[:-4];
+		x = []
+		for name in os.listdir(DATA_SOURCE_PATH):
+			if name.startswith(fn):
+				gs = Model.Rgb2greyFromFileName(DATA_SOURCE_PATH+name);
+				x.append(np.average(gs));
+				break;
+
+		est = Estimation(model=Model().get_model(),thu=ESTIMATION_THU,thd=ESTIMATION_THD);
+		est.clear_label();
+		nl,ns,vn = est.get_shadows_label_tag(filename = fname, stats_only=True);
+		x += [nl,ns];
+
+		ca = Calculation();
+		bscores = ca.detect_boundary(fname, r_neigh=DETECT_BOUNDARY_R_NEIGH);
+		bsnum = len(bscores);
+		aver_norm = 0;
+		mat = []
+		mat1 = []
+		for bs in bscores.keys():
+			aver_norm += LA.norm(bscores[bs])
+			mat.append(bscores[bs]);
+			mat1.append([bs[3],bs[4],bs[5]]);
+		aver_norm /= bsnum;
+		mat = np.array(mat);
+		mat1 = np.array(mat1);
+		vec_aver = np.mean(mat,0);  # 3
+		vec_aver1 = np.mean(mat1,0);  # 3
+		vec_var = np.var(mat,0); # 3
+		vec_var1 = np.var(mat1,0); # 3
+		x += [bsnum, aver_norm,vec_aver[0],vec_aver[1],vec_aver[2], vec_var[0], vec_var[1], vec_var[2], \
+				vec_aver1[0],vec_aver1[1],vec_aver1[2], vec_var1[0], vec_var1[1], vec_var1[2]];
+
+		assert len(x) == 17
+		path = RESULT_SOURCE_PATH+'direction_result_data/'+("USE_BINS" if self.dpmodel.predict([x])[0] else "NO_BINS")+'/';
+		import shutil
+		for name in os.listdir(path):
+			if name.startswith(fn):
+				shutil.copyfile(path+name, DynamicPolicy.GetDPResultPath()+name);
+				break;
+
 
 
 if __name__ == '__main__':
-	calc = Calculation()
+	# calc = Calculation()
+	# cnt = 0
+	# total = 1
+	# for i in xrange(358,383):
+	# 	fn = "meas-%05d-00000.png" % i
+	# 	try:
+	# 		calc.process(fname=fn,detect_boundary_only=False)
+	# 		cnt += 1
+	# 		if cnt >= total:
+	# 			break
+	# 	except Exception,e:
+	# 		print e
+	# 		pass
+	dp = DynamicPolicy();
 	cnt = 0
-	total = 100
+	total = 10000
 	for i in xrange(1,383):
 		fn = "meas-%05d-00000.png" % i
 		try:
-			calc.process(fname=fn,detect_boundary_only=True)
+			dp.select(fn)
 			cnt += 1
 			if cnt >= total:
 				break
 		except Exception,e:
 			print e
-			pass
 
 
 
