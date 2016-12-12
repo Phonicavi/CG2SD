@@ -381,10 +381,27 @@ class DynamicPolicy:
 		    ("GBDT",GradientBoostingClassifier(max_features = 'auto')),
 		    ]
 
+	def evaluate_model(self,times=50,classifier=None):
+		import random
+		from sklearn.metrics import accuracy_score
+		fea = self.__generate_feature() if not os.path.exists(DynamicPolicy.GetFeaturePath()) else joblib.load(DynamicPolicy.GetFeaturePath());
+		clf = self.dpmodel if classifier == None else classifier
+		ttl_acc = 0;
+		for i in xrange(times):
+			random.shuffle(fea);
+			traindata = fea[0:int(len(fea)*self.split_ratio)];
+			testdata = fea[int(len(fea)*self.split_ratio):];
+			TrainX = [item[:-1] for item in traindata]
+			TrainY = [item[-1] for item in traindata]
+			TestX = [item[:-1] for item in testdata]
+			TestY = [item[-1] for item in testdata]
 
-	def evaluate_model(self):
-		pass
-
+			clf.fit(TrainX, TrainY)
+			PredY = clf.predict(TestX)
+			ttl_acc += accuracy_score(TestY,PredY)
+		print '##### Model Evaluation #####';
+		print '>>>>> Aver accuracy_score: %.2f%%' % (ttl_acc*1.0/times*100);
+		return ttl_acc/times
 	def __load_model(self):
 		return joblib.load(DynamicPolicy.GetModelPath());
 
@@ -454,30 +471,21 @@ class DynamicPolicy:
 		return fea
 
 
-	def __generate_model(self):
+	def __generate_model(self,repeat=100):
 		import random
 		from sklearn.metrics import classification_report as clfr
 		from sklearn.metrics import accuracy_score
 		fea = self.__generate_feature() if not os.path.exists(DynamicPolicy.GetFeaturePath()) else joblib.load(DynamicPolicy.GetFeaturePath());
-		random.shuffle(fea);
-		self.traindata = fea[0:int(len(fea)*self.split_ratio)];
-		self.testdata = fea[int(len(fea)*self.split_ratio):];
-
-		TrainX = [item[:-1] for item in self.traindata]
-		TrainY = [item[-1] for item in self.traindata]
-		TestX = [item[:-1] for item in self.testdata]
-		TestY = [item[-1] for item in self.testdata]
-
+		
 		best_clf = None;
 		best_acc = -1;
 		for name, clf in self.classifiers:
-			clf.fit(TrainX, TrainY)
-			PredY = clf.predict(TestX)
-			print name, accuracy_score(TestY,PredY)
-			if accuracy_score(TestY,PredY) > best_acc:
-				best_acc = accuracy_score(TestY,PredY);
+			acc = self.evaluate_model(times=repeat,classifier=clf)
+			print name, acc
+			if acc > best_acc:
+				best_acc = acc;
 				best_clf = clf;
-			print(clfr(TestY, PredY))
+			# print(clfr(TestY, PredY))
 		joblib.dump(best_clf,DynamicPolicy.GetModelPath(),compress=3);
 
 		return best_clf
@@ -543,17 +551,18 @@ if __name__ == '__main__':
 	# 		print e
 	# 		pass
 	dp = DynamicPolicy();
-	cnt = 0
-	total = 10000
-	for i in xrange(1,383):
-		fn = "meas-%05d-00000.png" % i
-		try:
-			dp.select(fn)
-			cnt += 1
-			if cnt >= total:
-				break
-		except Exception,e:
-			print e
+	dp.evaluate_model(times=1000);
+	# cnt = 0
+	# total = 10000
+	# for i in xrange(1,383):
+	# 	fn = "meas-%05d-00000.png" % i
+	# 	try:
+	# 		dp.select(fn)
+	# 		cnt += 1
+	# 		if cnt >= total:
+	# 			break
+	# 	except Exception,e:
+	# 		print e
 
 
 
