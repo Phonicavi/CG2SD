@@ -160,7 +160,7 @@ class Estimation:
 					numShadows += 1;
 		validNum = numLits+numShadows
 		if stats_only:
-			return numLits, numShadows, validNum
+			return numLits/self.__model.size, numShadows/self.__model.size, validNum/self.__model.size
 		print '######  %s shadow label #####' % filename
 		print '#Valid:', numLits+numShadows, '('+str(int(validNum/self.__model.size*100))+'%)';
 		print '#Lits:', numLits, '('+str(int(numLits/validNum*100))+'%)';

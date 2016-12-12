@@ -373,7 +373,7 @@ class DynamicPolicy:
 
 		self.testdata = None;
 		self.traindata = None;
-		self.split_ratio=0.95
+		self.split_ratio=0.85
 		self.classifiers = [
 		    ("Random Forest(entropy)",RandomForestClassifier(criterion = 'entropy',max_features = 'auto',n_jobs= -1)),
 		    ("Random Forest(gini)",RandomForestClassifier(criterion = 'gini', max_features = 'auto',n_jobs= -1)),
@@ -437,9 +437,11 @@ class DynamicPolicy:
 			vec_var1 = np.var(mat1,0); # 3
 			raw_data[fname] += [bsnum, aver_norm,vec_aver[0],vec_aver[1],vec_aver[2], vec_var[0], vec_var[1], vec_var[2], \
 					vec_aver1[0],vec_aver1[1],vec_aver1[2], vec_var1[0], vec_var1[1], vec_var1[2]];
+			raw_data[fname] += list(np.cov(mat.T).reshape(-1));
+			raw_data[fname] += list(np.cov(mat1.T).reshape(-1));
 		for item in raw_data.values():
 			print item
-			assert(len(item) == 18);
+			assert(len(item) == 36);
 
 		fea = [0 for i in xrange(len(raw_data))]
 
@@ -457,8 +459,6 @@ class DynamicPolicy:
 		from sklearn.metrics import classification_report as clfr
 		from sklearn.metrics import accuracy_score
 		fea = self.__generate_feature() if not os.path.exists(DynamicPolicy.GetFeaturePath()) else joblib.load(DynamicPolicy.GetFeaturePath());
-		from sklearn.grid_search import GridSearchCV as GSCV
-		from sklearn.svm import SVC
 		random.shuffle(fea);
 		self.traindata = fea[0:int(len(fea)*self.split_ratio)];
 		self.testdata = fea[int(len(fea)*self.split_ratio):];
@@ -515,8 +515,10 @@ class DynamicPolicy:
 		vec_var1 = np.var(mat1,0); # 3
 		x += [bsnum, aver_norm,vec_aver[0],vec_aver[1],vec_aver[2], vec_var[0], vec_var[1], vec_var[2], \
 				vec_aver1[0],vec_aver1[1],vec_aver1[2], vec_var1[0], vec_var1[1], vec_var1[2]];
+		x += list(np.cov(mat.T).reshape(-1));
+		x += list(np.cov(mat1.T).reshape(-1));
 
-		assert len(x) == 17
+		assert len(x) == 35
 		path = RESULT_SOURCE_PATH+'direction_result_data/'+("USE_BINS" if self.dpmodel.predict([x])[0] else "NO_BINS")+'/';
 		import shutil
 		for name in os.listdir(path):
