@@ -352,13 +352,26 @@ class DynamicPolicy:
 		return DYNAMIC_POLICY_PATH+"dynamicPolicy_fea.data";
 	@staticmethod
 	def GetLabelPath():
-		return DYNAMIC_POLICY_PATH+"label.csv";
+		return DYNAMIC_POLICY_PATH+"label-comfine.csv";
 	@staticmethod
 	def GetDPResultPath():
 		path = RESULT_SOURCE_PATH+"direction_result_data/dp/"
 		if not os.path.exists(path):
 			os.makedirs(path);
 		return path
+	@staticmethod
+	def GetDPResultCSVPath():
+		path = RESULT_SOURCE_PATH+"score/"
+		if not os.path.exists(path):
+			os.makedirs(path);
+		return path+"dp_result.csv"
+
+	@staticmethod
+	def GetScorePath(isdp=False):
+		path = RESULT_SOURCE_PATH+"score/"
+		if not os.path.exists(path):
+			os.makedirs(path);
+		return (path+'dynamic_policy.csv') if isdp else (path+'single_policy.csv');
 
 	def __init__(self):
 		self.clear();
@@ -370,14 +383,19 @@ class DynamicPolicy:
 		from sklearn.naive_bayes import GaussianNB
 		from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 		from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis as QDA
+		from sklearn.linear_model import RidgeClassifier
 
 		self.testdata = None;
 		self.traindata = None;
-		self.split_ratio=0.85
+		self.split_ratio=0.80
 		self.classifiers = [
-		    ("Random Forest(entropy)",RandomForestClassifier(criterion = 'entropy',max_features = 'auto',n_jobs= -1)),
-		    ("Random Forest(gini)",RandomForestClassifier(criterion = 'gini', max_features = 'auto',n_jobs= -1)),
+		    # ("Random Forest(entropy)",RandomForestClassifier(criterion = 'entropy',n_jobs= -1)),
+		    # ("Random Forest(gini)",RandomForestClassifier(criterion = 'gini', max_features = 'auto',n_jobs= -1)),
+		    ("Decision Tree",DecisionTreeClassifier()),
+		    ("RidgeClassifier",RidgeClassifier()),
+		    # ("AdaBoost",AdaBoostClassifier()),
 		    ("QDA",QDA()),
+		    ("LDA",LDA()),
 		    ("GBDT",GradientBoostingClassifier(max_features = 'auto')),
 		    ]
 
@@ -387,9 +405,11 @@ class DynamicPolicy:
 		fea = self.__generate_feature() if not os.path.exists(DynamicPolicy.GetFeaturePath()) else joblib.load(DynamicPolicy.GetFeaturePath());
 		clf = self.dpmodel if classifier == None else classifier
 		ttl_acc = 0;
+
 		for i in xrange(times):
 			random.shuffle(fea);
 			traindata = fea[0:int(len(fea)*self.split_ratio)];
+			print traindata[0];
 			testdata = fea[int(len(fea)*self.split_ratio):];
 			TrainX = [item[:-1] for item in traindata]
 			TrainY = [item[-1] for item in traindata]
@@ -399,6 +419,7 @@ class DynamicPolicy:
 			clf.fit(TrainX, TrainY)
 			PredY = clf.predict(TestX)
 			ttl_acc += accuracy_score(TestY,PredY)
+			print accuracy_score(TrainY,clf.predict(TrainX)),accuracy_score(TestY,PredY)
 		print '##### Model Evaluation #####';
 		print '>>>>> Aver accuracy_score: %.2f%%' % (ttl_acc*1.0/times*100);
 		return ttl_acc/times
@@ -475,7 +496,6 @@ class DynamicPolicy:
 		import random
 		from sklearn.metrics import classification_report as clfr
 		from sklearn.metrics import accuracy_score
-		fea = self.__generate_feature() if not os.path.exists(DynamicPolicy.GetFeaturePath()) else joblib.load(DynamicPolicy.GetFeaturePath());
 		
 		best_clf = None;
 		best_acc = -1;
@@ -527,12 +547,38 @@ class DynamicPolicy:
 		x += list(np.cov(mat1.T).reshape(-1));
 
 		assert len(x) == 35
-		path = RESULT_SOURCE_PATH+'direction_result_data/'+("USE_BINS" if self.dpmodel.predict([x])[0] else "NO_BINS")+'/';
+		lbl = self.dpmodel.predict([x])[0];
+		path = RESULT_SOURCE_PATH+'direction_result_data/'+("USE_BINS" if lbl else "NO_BINS")+'/';
 		import shutil
 		for name in os.listdir(path):
 			if name.startswith(fn):
 				shutil.copyfile(path+name, DynamicPolicy.GetDPResultPath()+name);
 				break;
+		return (fn,lbl)
+
+	def score(self):
+		cnt = 0;
+		use_bins_score = 0;
+		no_bins_score = 0;
+		dp_score = 0;
+		with open(DynamicPolicy.GetScorePath(isdp=False),'r+') as f1, open(DynamicPolicy.GetDPResultCSVPath(),'r+') as f2:
+			# name, use_bin_score, no_bin_score
+			select = []
+			for line in f2.readlines():
+				select.append(int(line.strip().split(',')[1]))
+			for line in f1.readlines():
+				li = line.strip().split(',');
+				use_bins_score += int(li[1]);
+				no_bins_score += int(li[2]);
+				dp_score += int(li[1]) if select[cnt] == 1 else int(li[2]);
+				cnt += 1
+		print ">>>>> Performance metrics: [USE_BIN] %.2f, [NO_BINS] %.2f, [DP] %.2f" % \
+			(use_bins_score/cnt, no_bins_score/cnt, dp_score/cnt);
+		return use_bins_score/cnt, no_bins_score/cnt, dp_score/cnt;
+
+
+
+
 
 
 
@@ -551,18 +597,24 @@ if __name__ == '__main__':
 	# 		print e
 	# 		pass
 	dp = DynamicPolicy();
-	dp.evaluate_model(times=1000);
+	# dp.evaluate_model(times=200);
+	dp.score();
 	# cnt = 0
 	# total = 10000
+	# ret = []
 	# for i in xrange(1,383):
 	# 	fn = "meas-%05d-00000.png" % i
 	# 	try:
-	# 		dp.select(fn)
+	# 		ret.append(dp.select(fn))
 	# 		cnt += 1
 	# 		if cnt >= total:
 	# 			break
 	# 	except Exception,e:
 	# 		print e
+	# with open(DynamicPolicy.GetDPResultCSVPath(),'w+') as f1:
+	# 	for item in ret:
+	# 		f1.write(item[0]+','+str(item[1])+'\n');
+			
 
 
 
